@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Karten Zufall</title>
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f0f0f0;
+    }
+
+    /* Hamburger Button */
+    .menu-btn {
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        font-size: 28px;
+        cursor: pointer;
+        z-index: 1001;
+        background: white;
+        border-radius: 8px;
+        padding: 5px 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    /* Overlay Hintergrund */
+    .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.3);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        z-index: 999;
+    }
+
+    .overlay.active {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    /* Sidebar */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 160px;
+        height: 100%;
+        background: #e8f5e9;
+        padding: 20px 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+        z-index: 1000;
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .card-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .card {
+        width: 80px;
+        height: 120px;
+        border-radius: 12px;
+        border: 2px solid #2e7d32;
+        background: #4caf50;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 40px;
+        color: white;
+    }
+
+    .controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 6px;
+    }
+
+    .controls span {
+        min-width: 20px;
+        text-align: center;
+    }
+
+    button {
+        width: 28px;
+        height: 28px;
+        font-size: 16px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        background: #2e7d32;
+        color: white;
+    }
+
+    button:hover {
+        background: #1b5e20;
+    }
+
+    /* Main */
+    .main {
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .flip-container {
+        perspective: 1000px;
+    }
+
+    .main-card {
+        width: 200px;
+        height: 300px;
+        position: relative;
+        transform-style: preserve-3d;
+        transition: transform 0.6s;
+        cursor: pointer;
+    }
+
+    .main-card.flipped {
+        transform: rotateY(180deg);
+    }
+
+    .card-face {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 16px;
+        border: 3px solid #2e7d32;
+        background: #4caf50;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 90px;
+        color: white;
+        backface-visibility: hidden;
+    }
+
+    .card-back {
+        transform: rotateY(180deg);
+    }
+</style>
+</head>
+<body>
+
+<div class="menu-btn" id="menuBtn">☰</div>
+<div class="overlay" id="overlay"></div>
+
+<div class="sidebar" id="sidebar"></div>
+
+<div class="main">
+    <div class="flip-container">
+        <div class="main-card" id="mainCard">
+            <div class="card-face" id="front">?</div>
+            <div class="card-face card-back" id="back">?</div>
+        </div>
+    </div>
+</div>
+
+<script>
+const cards = [
+    { symbol: "•", count: 1 },
+    { symbol: "••", count: 1 },
+    { symbol: "•••", count: 1 },
+    { symbol: "🐰", count: 1 }
+];
+
+const sidebar = document.getElementById("sidebar");
+const mainCard = document.getElementById("mainCard");
+const front = document.getElementById("front");
+const back = document.getElementById("back");
+const menuBtn = document.getElementById("menuBtn");
+const overlay = document.getElementById("overlay");
+
+let showingFront = true;
+let lastCard = null;
+
+/* Menü Steuerung */
+menuBtn.onclick = () => {
+    sidebar.classList.add("open");
+    overlay.classList.add("active");
+};
+
+overlay.onclick = () => {
+    sidebar.classList.remove("open");
+    overlay.classList.remove("active");
+};
+
+/* Sidebar bauen */
+cards.forEach((card) => {
+    const container = document.createElement("div");
+    container.className = "card-container";
+
+    const cardDiv = document.createElement("div");
+    cardDiv.className = "card";
+    cardDiv.textContent = card.symbol;
+
+    const controls = document.createElement("div");
+    controls.className = "controls";
+
+    const minus = document.createElement("button");
+    minus.textContent = "-";
+
+    const number = document.createElement("span");
+    number.textContent = card.count;
+
+    const plus = document.createElement("button");
+    plus.textContent = "+";
+
+    minus.onclick = () => {
+        if (card.count > 0) {
+            card.count--;
+            number.textContent = card.count;
+        }
+    };
+
+    plus.onclick = () => {
+        card.count++;
+        number.textContent = card.count;
+    };
+
+    controls.appendChild(minus);
+    controls.appendChild(number);
+    controls.appendChild(plus);
+
+    container.appendChild(cardDiv);
+    container.appendChild(controls);
+
+    sidebar.appendChild(container);
+});
+
+/* Zufall mit Hasenregel */
+function getRandomCard() {
+    let total = cards.reduce((sum, c) => sum + c.count, 0);
+    if (total === 0) return "?";
+
+    let rand = Math.random() * total;
+    let selected = null;
+
+    for (let card of cards) {
+        rand -= card.count;
+        if (rand <= 0) {
+            selected = card.symbol;
+            break;
+        }
+    }
+
+    if (selected === "🐰" && lastCard === "🐰") {
+        return getRandomCard();
+    }
+
+    lastCard = selected;
+    return selected;
+}
+
+/* Start */
+front.textContent = getRandomCard();
+
+/* Flip */
+mainCard.onclick = () => {
+    const newSymbol = getRandomCard();
+
+    if (showingFront) {
+        back.textContent = newSymbol;
+    } else {
+        front.textContent = newSymbol;
+    }
+
+    mainCard.classList.toggle("flipped");
+    showingFront = !showingFront;
+};
+</script>
+
+</body>
+</html>
